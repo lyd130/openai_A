@@ -1,0 +1,157 @@
+
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <title>📈 AI 图像联动分析系统</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f8f9fa; }
+    h2, h3 { margin-top: 0; }
+    .container { display: flex; flex-direction: column; gap: 20px; }
+    .row { display: flex; gap: 20px; flex-wrap: wrap; }
+    .column { flex: 1; display: flex; flex-direction: column; gap: 10px; min-width: 360px; }
+    .section { background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 0 5px rgba(0,0,0,0.1); }
+    .result-box { background: #f1f3f5; padding: 10px; border-radius: 5px; min-height: 120px; max-height: 300px; overflow-y: auto; white-space: pre-wrap; }
+    input, select, button { padding: 6px 10px; border-radius: 4px; border: 1px solid #ccc; }
+    button { background-color: #007bff; color: white; cursor: pointer; }
+    button:hover { background-color: #0056b3; }
+    .upload-btns, .ai-controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>📈 AI 图像联动分析系统</h2>
+
+    <!-- 图表区域 -->
+    <div class="section" style="width: 100%;">
+      <div id="tv_chart" style="height:500px;"></div>
+      <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+      <script type="text/javascript">
+        function mapPeriodToInterval(period) {
+          const map = {
+            "30m": "30",
+            "1h": "60",
+            "1d": "D",
+            "1mo": "W",
+            "3mo": "W",
+            "6mo": "M"
+          };
+          return map[period] || "D";
+        }
+
+        function getFullSymbol(code) {
+          if (code.includes(":")) return code;
+          if (/^\d{4}$/.test(code)) return "TSE:" + code;
+          if (/^\d{5}$/.test(code)) return "HKEX:" + code;
+          if (/^\d{6}$/.test(code)) return "SSE:" + code;
+          return "NASDAQ:" + code;
+        }
+
+        function renderChart(symbol = "NASDAQ:AAPL", interval = "D") {
+          document.getElementById("tv_chart").innerHTML = ""; // 清空旧图表
+          new TradingView.widget({
+            autosize: true,
+            symbol: symbol,
+            interval: interval,
+            timezone: "Asia/Shanghai",
+            theme: "light",
+            style: "1",
+            locale: "zh",
+            toolbar_bg: "#f1f3f6",
+            enable_publishing: false,
+            allow_symbol_change: true,
+            container_id: "tv_chart",
+            studies: ["STD;Bollinger_Bands", "STD;MACD", "STD;RSI"]
+          });
+        }
+
+        window.onload = function () {
+          renderChart();
+        };
+
+        function updateChartByInputs() {
+          const code = document.getElementById("ai_stock_code").value.trim();
+          const period = document.getElementById("ai_period").value;
+          const symbol = getFullSymbol(code);
+          const interval = mapPeriodToInterval(period);
+          renderChart(symbol, interval);
+        }
+      </script>
+    </div>
+
+    <!-- 下方功能区域 -->
+    <div class="row">
+      <div class="column">
+
+        <div class="section">
+          <h3>🖼️ 图像上传</h3>
+          <div class="upload-btns">
+            <input type="file" id="chart_image">
+            <button onclick="uploadChart()">上传分析</button>
+          </div>
+          <div id="image_result" class="result-box"></div>
+        </div>
+
+        <div class="section">
+          <h3>📰 新闻搜索</h3>
+          <input type="text" id="news_query" placeholder="输入关键词">
+          <button onclick="searchNews()">搜索</button>
+          <div id="news_result" class="result-box"></div>
+        </div>
+
+      </div>
+
+      <div class="column">
+
+        <div class="section">
+          <h3>🧠 AI 分析</h3>
+          <div class="ai-controls">
+            <input type="text" id="ai_stock_code" placeholder="输入股票代码">
+            <select id="ai_period">
+              <option value="30m">30分钟</option>
+              <option value="1h">1小时</option>
+              <option value="1d" selected>日线</option>
+              <option value="1mo">1个月</option>
+              <option value="3mo">3个月</option>
+              <option value="6mo">6个月</option>
+            </select>
+            <button onclick="updateChartByInputs(); aiAnalyze();">AI分析</button>
+          </div>
+          <div id="ai_result" class="result-box"></div>
+        </div>
+
+        <div class="section">
+          <h3>📦 持仓管理</h3>
+          <input type="text" id="holding_input" placeholder="股票代码-数量-成本价（如 AAPL-100-145）">
+          <div style="margin-top: 6px;">
+            <button onclick="addHolding()">录入持仓</button>
+            <button onclick="queryHoldings()">显示持仓</button>
+            <button onclick="calculatePNL()">持仓盈亏分析</button>
+          </div>
+          <div id="holdings_result" class="result-box"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="column section">
+        <h3>📡 信息采集</h3>
+        <button onclick="runSignals()">启动信号采集</button>
+        <button onclick="stopSignals()">停止采集</button>
+        <button onclick="signalStatus()">查询状态</button>
+        <div id="signal_status" class="result-box"></div>
+      </div>
+
+      <div class="column section">
+        <h3>🕹️ 调度管理</h3>
+        <button onclick="startScheduler()">启动调度</button>
+        <button onclick="stopScheduler()">停止调度</button>
+        <button onclick="statusScheduler()">查询状态</button>
+        <div id="scheduler_status" class="result-box"></div>
+      </div>
+    </div>
+  </div>
+
+<script src="/static/functions.js"></script>
+</body>
+</html>
